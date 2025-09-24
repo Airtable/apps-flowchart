@@ -8,33 +8,24 @@ let worker;
 
 const workerString = `
     // Run viz.js in a worker to avoid blocking the main thread.
-    self.importScripts('https://unpkg.com/viz.js@2.1.2/viz.js', 'https://unpkg.com/viz.js@2.1.2/full.render.js');
-
-    let viz;
-
-    function restart() {
-        viz = new Viz();
-        viz.renderString('digraph {}', {
-            format: 'svg',
-            engine: 'dot',
-        }).catch(() => {});
-    }
-
-    restart();
+    self.importScripts('https://cdn.jsdelivr.net/npm/@viz-js/viz@3.1.0');
 
     export function layout(source) {
         return new Promise((resolve, reject) => {
             let timeoutTimer = setTimeout(() => {
-                restart();
                 reject(new Error('timeout'));
             }, 10000);
-
-            return viz.renderString(source, {
-                format: 'svg',
-                engine: 'dot',
-            }).then(resolve).catch(err => {
+           
+            Viz.instance().then(viz => {
+                return viz.renderString(source, {
+                    format: 'svg',
+                    engine: 'dot',
+                });
+            }).then(svgString => {
+                resolve(svgString);
                 clearTimeout(timeoutTimer);
-                restart();
+            }).catch(err => {
+                clearTimeout(timeoutTimer);
                 reject(err);
             });
         });
@@ -116,7 +107,7 @@ export function createLayout(settings) {
         nodes.push(
             `${record.id} [id="${record.id}" label="${displayText}"
             tooltip="${displayText}"
-            fontcolor="${shouldUseLightText ? 'white' : 'black'}" 
+            fontcolor="${shouldUseLightText ? 'white' : 'black'}"
             fillcolor="${recordColor ? colorUtils.getHexForColor(recordColor) : 'white'}"]`,
         );
 
