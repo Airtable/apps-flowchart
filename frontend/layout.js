@@ -8,12 +8,13 @@ let worker;
 
 const workerString = `
     // Run viz.js in a worker to avoid blocking the main thread.
-    self.importScripts('https://cdn.jsdelivr.net/npm/@viz-js/viz@3.1.0');
+    // Note: viz-js utilizes WebAssembly. Be sure to note the use of WebAssembly if you're submitting an extension to Airtable's Marketplace.
+    self.importScripts('https://unpkg.com/@viz-js/viz@3.1.0/lib/viz-standalone.js');
 
     export function layout(source) {
         return new Promise((resolve, reject) => {
             let timeoutTimer = setTimeout(() => {
-                reject(new Error('timeout'));
+                reject(new Error('Layout generation timed out after 10 seconds'));
             }, 10000);
            
             Viz.instance().then(viz => {
@@ -22,8 +23,8 @@ const workerString = `
                     engine: 'dot',
                 });
             }).then(svgString => {
-                resolve(svgString);
                 clearTimeout(timeoutTimer);
+                resolve(svgString);
             }).catch(err => {
                 clearTimeout(timeoutTimer);
                 reject(err);
@@ -97,10 +98,7 @@ export function createLayout(settings) {
         const shouldUseLightText = record
             ? colorUtils.shouldUseLightTextOnColor(recordColor)
             : false;
-        let displayText = record.name
-            .substring(0, 50)
-            .trim()
-            .replace(/"/g, '\\"');
+        let displayText = record.name.substring(0, 50).trim().replace(/"/g, '\\"');
         if (record.name.length > 50) {
             displayText += '...';
         }
